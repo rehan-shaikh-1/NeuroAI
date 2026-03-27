@@ -4,27 +4,46 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import TalkingAvatar from "../../components/TalkingAvatar";
 import RealisticAvatar from "../../components/RealisticAvatar";
+import VrmAvatar from "../../components/VrmAvatar";
 
 export default function VideoSessionPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const model = searchParams.get('model') || 'neuro-core';
+    const [avatarMode, setAvatarMode] = useState<"2d" | "3d">(model === 'cartoon-ai' ? "3d" : "2d");
     const [inputText, setInputText] = useState("");
     const [lastAiMessage, setLastAiMessage] = useState("");
     const [isThinking, setIsThinking] = useState(false);
 
-    const handleSend = (e?: React.FormEvent) => {
+    const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (inputText.trim()) {
+            const userMsg = inputText;
             setInputText("");
             setIsThinking(true);
             
-            // Simulate AI processing payload taking 1 second to connect
-            setTimeout(() => {
-                const response = "Here is an explanation of Ohm's Law. It states that current through a conductor between two points is directly proportional to the voltage across the two points. We can visualize this using standard formulas.";
-                setLastAiMessage(response);
+            try {
+                const response = await fetch("http://localhost:8000/api/v1/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name: "Ashish",
+                        raw_input: userMsg,
+                        history: [],
+                        target_skill: userMsg,
+                        education_level: "Undergraduate"
+                    })
+                });
+
+                if (!response.ok) throw new Error("Connection failed");
+                const data = await response.json();
+                setLastAiMessage(data.reply);
                 setIsThinking(false);
-            }, 1000);
+            } catch (err) {
+                console.error(err);
+                setLastAiMessage("Warning: Neuro Core Offline. Ensure your FastAPI Python backend is running on port 8000.");
+                setIsThinking(false);
+            }
         }
     };
 
@@ -40,6 +59,12 @@ export default function VideoSessionPage() {
                     NEURO AI
                 </button>
                 <div className="flex gap-4 items-center">
+                    <button
+                        onClick={() => setAvatarMode(prev => prev === "3d" ? "2d" : "3d")}
+                        className="text-xs font-bold text-orange-600 bg-orange-100/80 hover:bg-orange-200 px-4 py-1.5 rounded-full transition-colors flex items-center shadow-sm"
+                    >
+                        {avatarMode === "3d" ? "2D Mode" : "3D Mode"}
+                    </button>
                     <div className="px-4 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                         Live Session
@@ -64,7 +89,9 @@ export default function VideoSessionPage() {
                     )}
                     
                     <div className="relative z-10">
-                        {model === 'realistic-teacher' ? (
+                        {avatarMode === "3d" ? (
+                            <VrmAvatar isActive={true} textToSpeak={lastAiMessage} sizeMode="video" />
+                        ) : model === 'realistic-teacher' ? (
                             <RealisticAvatar isActive={true} textToSpeak={lastAiMessage} sizeMode="video" />
                         ) : (
                             <TalkingAvatar isActive={true} textToSpeak={lastAiMessage} sizeMode="video" />

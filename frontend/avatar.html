@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D VRM Avatar Proto</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1a1a2e; font-family: sans-serif; }
+        #app { width: 100vw; height: 100vh; }
+        #controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display:flex; flex-direction:column; align-items:center; gap: 10px; z-index: 10; }
+        .instructions { color: #fff; font-size: 14px; opacity: 0.8; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px;}
+        button { padding: 12px 24px; font-size: 16px; cursor: pointer; border: none; border-radius: 8px; background: #e94560; color: white; font-weight: bold; }
+        button:active { background: #c83b52; }
+    </style>
+    <!-- Import maps polyfill for older browsers -->
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+          "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@3.2.0/lib/three-vrm.module.js"
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="controls">
+        <div class="instructions">Hold to simulate the VRM (3D True VTuber) mouth moving for speech</div>
+        <button id="talkBtn">Simulate Talking</button>
+    </div>
+    <div id="app"></div>
+    
+    <!-- ES Module Script -->
+    <script type="module" src="avatar.js"></script>
+</body>
+</html>

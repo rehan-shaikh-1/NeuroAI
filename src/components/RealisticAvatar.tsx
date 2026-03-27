@@ -90,13 +90,30 @@ export default function RealisticAvatar({ textToSpeak, isActive, sizeMode = 'cha
 
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Find highest quality female voice available
-    const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(v => v.name.includes("Zira") || v.name.includes("Female") || v.name.includes("Google US English"));
-    if (femaleVoice) utterance.voice = femaleVoice;
-    
-    utterance.rate = 1.0;
-    utterance.pitch = 1.1;
+    const pickBestVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        const priority = [
+            "Google UK English Female",
+            "Google US English",
+            "Google UK English Male",
+            "Microsoft Zira",
+            "Microsoft David",
+            "Samantha",
+            "Karen",
+            "Daniel",
+            "Moira",
+        ];
+        for (const name of priority) {
+            const v = voices.find(v => v.name === name);
+            if (v) return v;
+        }
+        return voices.find(v => v.lang.startsWith('en-')) ?? null;
+    };
+
+    const voice = pickBestVoice();
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
 
     utterance.onstart = () => {
         animatingRef.current = true;

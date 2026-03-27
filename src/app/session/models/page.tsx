@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import Avatar3D from "../../../components/Avatar3D";
+import VrmAvatar from "../../../components/VrmAvatar";
 
 export default function ModelSelectPage() {
     const router = useRouter();
@@ -48,14 +48,14 @@ export default function ModelSelectPage() {
                     <div className="relative h-[400px] md:h-[480px] w-full bg-[#f8f9fc] rounded-3xl overflow-hidden shadow-lg group-hover:shadow-2xl group-hover:-translate-y-2 transition-all duration-300 border border-gray-100 group-hover:border-blue-400/50">
                         {/* High-Fidelity 3D Layer */}
                         <div className="absolute inset-0">
-                            <Avatar3D />
+                            <VrmAvatar sizeMode="card" />
                         </div>
 
                         {/* Text Content overlaying the image bottom */}
                         <div className="absolute bottom-0 left-0 w-full p-6 text-white text-left z-20 pointer-events-none">
                             <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent -z-10"></div>
-                            <h2 className="text-3xl font-black mb-1 group-hover:text-blue-400 transition-colors">Cartoon AI</h2>
-                            <p className="text-gray-300 text-sm font-medium">Interactive 3D Host</p>
+                            <h2 className="text-3xl font-black mb-1 group-hover:text-blue-400 transition-colors">VRM Anime</h2>
+                            <p className="text-gray-300 text-sm font-medium">Interactive 3D VTuber</p>
                         </div>
                     </div>
                 </motion.div>

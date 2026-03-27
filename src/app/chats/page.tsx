@@ -1,31 +1,98 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import TalkingAvatar from "../../components/TalkingAvatar";
 import RealisticAvatar from "../../components/RealisticAvatar";
+import VrmAvatar from "../../components/VrmAvatar";
 
 export default function ChatPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const model = searchParams.get('model') || 'neuro-core';
+    const [avatarMode, setAvatarMode] = useState<"2d" | "3d">(model === 'cartoon-ai' ? "3d" : "2d");
     const [isActive, setIsActive] = useState(false);
     const [inputText, setInputText] = useState("");
     const [messages, setMessages] = useState<{text: string, sender: string}[]>([]);
     const [lastAiMessage, setLastAiMessage] = useState("");
+    const [isListening, setIsListening] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const recognitionRef = useRef<any>(null);
 
-    const handleSend = (e?: React.FormEvent) => {
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    const toggleMic = () => {
+        if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+            alert('Speech recognition is not supported in your browser. Please use Chrome.');
+            return;
+        }
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+            return;
+        }
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+        recognition.onerror = () => setIsListening(false);
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            setInputText(transcript);
+            // Auto-send after voice capture
+            setTimeout(() => {
+                setMessages(prev => [...prev, { text: transcript, sender: "user" }]);
+                if (!isActive) setIsActive(true);
+                setInputText("");
+                sendMessage(transcript);
+            }, 100);
+        };
+        recognitionRef.current = recognition;
+        recognition.start();
+    };
+
+    const sendMessage = async (userMsg: string) => {
+        try {
+            const history = messages.map(msg => ({ 
+                role: msg.sender === "user" ? "user" : "assistant", 
+                content: msg.text 
+            }));
+            const response = await fetch("http://localhost:8000/api/v1/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: "Ashish",
+                    raw_input: userMsg,
+                    history: history,
+                    target_skill: userMsg,
+                    education_level: "Undergraduate"
+                })
+            });
+            if (!response.ok) throw new Error("Connection failed");
+            const data = await response.json();
+            setMessages(prev => [...prev, { text: data.reply, sender: "ai" }]);
+            setLastAiMessage(data.reply);
+        } catch (err) {
+            console.error(err);
+            const fallback = "Neuro Core is offline. Please start the backend server.";
+            setMessages(prev => [...prev, { text: fallback, sender: "ai" }]);
+            setLastAiMessage(fallback);
+        }
+    };
+
+    const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!isActive) setIsActive(true);
         if (inputText.trim()) {
-            setMessages(prev => [...prev, { text: inputText, sender: "user" }]);
+            const userMsg = inputText;
+            setMessages(prev => [...prev, { text: userMsg, sender: "user" }]);
             setInputText("");
-            // Simulate AI response
-            setTimeout(() => {
-                const response = "Here is an explanation of Ohm's Law. It states that current through a conductor between two points is directly proportional to the voltage across the two points.";
-                setMessages(prev => [...prev, { text: response, sender: "ai" }]);
-                setLastAiMessage(response);
-            }, 800);
+            await sendMessage(userMsg);
         }
     };
 
@@ -39,13 +106,21 @@ export default function ChatPage() {
                 >
                     NEURO AI
                 </button>
-                <button
-                    onClick={() => router.push('/')}
-                    className="text-xs font-bold text-gray-500 hover:text-gray-900 bg-white/50 hover:bg-white px-4 py-2 border border-gray-200 rounded-full uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
-                >
-                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    Terminate Session
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setAvatarMode(prev => prev === "3d" ? "2d" : "3d")}
+                        className="text-xs font-bold text-orange-600 bg-orange-100 hover:bg-orange-200 px-4 py-2 rounded-full transition-colors flex items-center shadow-sm"
+                    >
+                        {avatarMode === "3d" ? "Switch to 2D" : "Switch to 3D"}
+                    </button>
+                    <button
+                        onClick={() => router.push('/')}
+                        className="text-xs font-bold text-gray-500 hover:text-gray-900 bg-white/50 hover:bg-white px-4 py-2 border border-gray-200 rounded-full uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
+                    >
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        Terminate Session
+                    </button>
+                </div>
             </header>
 
             {/* Layout Transitions */}
@@ -61,7 +136,9 @@ export default function ChatPage() {
                     >
                         {/* Avatar */}
                         <div onClick={() => setIsActive(true)}>
-                            {model === 'realistic-teacher' ? (
+                            {avatarMode === "3d" ? (
+                                <VrmAvatar isActive={false} textToSpeak={lastAiMessage} sizeMode="chat" />
+                            ) : model === 'realistic-teacher' ? (
                                 <RealisticAvatar isActive={false} textToSpeak={lastAiMessage} sizeMode="chat" />
                             ) : (
                                 <TalkingAvatar isActive={false} textToSpeak={lastAiMessage} sizeMode="chat" />
@@ -97,7 +174,9 @@ export default function ChatPage() {
                         
                         {/* Left Side: Avatar */}
                         <div className="w-full md:w-1/3 flex flex-col items-center justify-center shrink-0 mb-6 md:mb-0">
-                            {model === 'realistic-teacher' ? (
+                            {avatarMode === "3d" ? (
+                                <VrmAvatar isActive={true} textToSpeak={lastAiMessage} sizeMode="chat" />
+                            ) : model === 'realistic-teacher' ? (
                                 <RealisticAvatar isActive={true} textToSpeak={lastAiMessage} sizeMode="chat" />
                             ) : (
                                 <TalkingAvatar isActive={true} textToSpeak={lastAiMessage} sizeMode="chat" />
@@ -139,16 +218,17 @@ export default function ChatPage() {
                                 ) : (
                                     messages.map((msg, i) => (
                                         <div key={i} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-                                            <div className={`p-4 rounded-2xl max-w-[85%] text-sm md:text-base leading-relaxed shadow-sm ${
+                                            <div className={`p-4 rounded-2xl max-w-[85%] w-fit text-sm md:text-base leading-relaxed shadow-sm break-words overflow-hidden ${
                                                 msg.sender === "user" 
                                                 ? "bg-orange-500 text-white rounded-tr-sm" 
                                                 : "bg-white border border-gray-100 text-gray-700 rounded-tl-sm shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
-                                            }`}>
+                                            }`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                                 {msg.text}
                                             </div>
                                         </div>
                                     ))
                                 )}
+                                <div ref={messagesEndRef} />
                             </div>
 
                             {/* Input Form at Bottom */}
@@ -165,7 +245,7 @@ export default function ChatPage() {
                                         placeholder="Message Neuro AI..."
                                         className="flex-grow bg-transparent outline-none text-gray-800 placeholder-gray-400 font-medium text-sm sm:text-base w-full min-w-0"
                                     />
-                                    <button type="button" className="p-2 sm:p-2.5 text-gray-400 hover:bg-white hover:text-orange-500 rounded-full hover:shadow-sm border border-transparent hover:border-gray-200 transition-all shrink-0">
+                                    <button type="button" onClick={toggleMic} className={`p-2 sm:p-2.5 rounded-full border transition-all shrink-0 ${isListening ? 'bg-red-500 text-white border-red-500 animate-pulse' : 'text-gray-400 hover:bg-white hover:text-orange-500 border-transparent hover:border-gray-200'}`} title={isListening ? "Stop listening" : "Speak"}>
                                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2.5" fill="none"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
                                     </button>
                                     <button type="submit" className="bg-orange-500 text-white p-2.5 sm:p-3 rounded-full hover:bg-orange-600 transition-all shadow-md shrink-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">

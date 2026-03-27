@@ -149,24 +149,32 @@ export default function TalkingAvatar({ textToSpeak, isActive, sizeMode = 'chat'
     // Slight delay to simulate processing before answering
     const timer = setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        
-        const voices = window.speechSynthesis.getVoices();
-        
-        // Find a Female English voice robustly (Zira on Windows, Samantha on macOS, or generic "female" label)
-        const femaleKeywords = ["female", "zira", "samantha", "victoria", "karen", "tessa", "moira", "fiona"];
-        let selectedVoice = voices.find(v => 
-            v.lang.startsWith('en-') && femaleKeywords.some(k => v.name.toLowerCase().includes(k))
-        );
-        
-        // Fallback to any english voice if a specific female one isn't explicitly named
-        if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.lang.startsWith('en-'));
-        }
-        
-        if (selectedVoice) utterance.voice = selectedVoice;
-        
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
+
+        const pickBestVoice = () => {
+            const voices = window.speechSynthesis.getVoices();
+            const priority = [
+                "Google UK English Female",
+                "Google US English",
+                "Google UK English Male",
+                "Microsoft Zira",
+                "Microsoft David",
+                "Samantha",
+                "Karen",
+                "Daniel",
+                "Moira",
+            ];
+            for (const name of priority) {
+                const v = voices.find(v => v.name === name);
+                if (v) return v;
+            }
+            return voices.find(v => v.lang.startsWith('en-')) ?? null;
+        };
+
+        const voice = pickBestVoice();
+        if (voice) utterance.voice = voice;
+        utterance.rate = 0.95;
+        utterance.pitch = 1.05;
+        utterance.volume = 1.0;
 
         utterance.onstart = () => {
             animatingRef.current = true;
