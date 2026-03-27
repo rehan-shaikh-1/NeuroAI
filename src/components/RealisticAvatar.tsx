@@ -20,6 +20,7 @@ export default function RealisticAvatar({ textToSpeak, isActive, sizeMode = 'cha
   const currentFrameRef = useRef(0);
   const playModeRef = useRef<'hi' | 'talking'>('hi');
   const animationFrameId = useRef<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // 1. Initial Asset Preloading Engine
   useEffect(() => {
@@ -79,48 +80,21 @@ export default function RealisticAvatar({ textToSpeak, isActive, sizeMode = 'cha
 
   // --- Animation Core --- //
   const triggerVoiceAndAnimation = (text: string, mode: 'hi' | 'talking') => {
-    if (!("speechSynthesis" in window)) {
-        console.error("SpeechSynthesis API not supported");
-        return;
-    }
+    if (audioRef.current) audioRef.current.pause();
 
-    window.speechSynthesis.cancel();
     playModeRef.current = mode;
     currentFrameRef.current = 0; // Reset frame timeline
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const url = `http://localhost:8000/api/v1/tts?text=${encodeURIComponent(text)}&model=female`;
+    const audio = new Audio(url);
+    audioRef.current = audio;
     
-    const pickBestVoice = () => {
-        const voices = window.speechSynthesis.getVoices();
-        const priority = [
-            "Google UK English Female",
-            "Google US English",
-            "Google UK English Male",
-            "Microsoft Zira",
-            "Microsoft David",
-            "Samantha",
-            "Karen",
-            "Daniel",
-            "Moira",
-        ];
-        for (const name of priority) {
-            const v = voices.find(v => v.name === name);
-            if (v) return v;
-        }
-        return voices.find(v => v.lang.startsWith('en-')) ?? null;
-    };
-
-    const voice = pickBestVoice();
-    if (voice) utterance.voice = voice;
-    utterance.rate = 0.95;
-    utterance.pitch = 1.05;
-
-    utterance.onstart = () => {
+    audio.onplay = () => {
         animatingRef.current = true;
         animateSequence();
     };
 
-    utterance.onend = () => {
+    audio.onended = () => {
         animatingRef.current = false;
         // Rest on the final frame of the active sequence instead of snapping back to zero
         const activeArray = playModeRef.current === 'hi' ? hiImagesRef.current : talkingImagesRef.current;
@@ -128,8 +102,13 @@ export default function RealisticAvatar({ textToSpeak, isActive, sizeMode = 'cha
             drawFrame(activeArray[activeArray.length - 1]);
         }
     };
+    
+    audio.onerror = (e) => {
+        console.error("Pyttsx3 TTS Audio Error:", e);
+        animatingRef.current = false;
+    };
 
-    window.speechSynthesis.speak(utterance);
+    audio.play().catch(e => console.error("Playback failed:", e));
   };
 
   const drawFrame = (img: HTMLImageElement) => {
@@ -192,7 +171,7 @@ export default function RealisticAvatar({ textToSpeak, isActive, sizeMode = 'cha
         <div className={`
             ${sizeMode === 'video' 
                 ? 'w-72 h-72 sm:w-80 sm:h-80 md:w-[450px] md:h-[450px] lg:w-[500px] lg:h-[500px] border-4 md:border-8 shadow-[0_0_100px_rgba(236,72,153,0.3)]' 
-                : isActive ? 'w-32 h-32 md:w-56 md:h-56 border-[3px] md:border-4 shadow-[0_0_50px_rgba(236,72,153,0.2)]' : 'w-48 h-48 md:w-64 md:h-64 border-4 shadow-[0_0_50px_rgba(236,72,153,0.2)]'}
+                : isActive ? 'w-48 h-48 md:w-72 md:h-72 border-[3px] md:border-4 shadow-[0_0_50px_rgba(236,72,153,0.2)]' : 'w-48 h-48 md:w-64 md:h-64 border-4 shadow-[0_0_50px_rgba(236,72,153,0.2)]'}
             rounded-full border-pink-500 bg-white relative flex items-center justify-center overflow-hidden transition-all duration-700 ease-out
             ${!isActive && sizeMode === 'chat' ? 'hover:scale-105' : ''}
         `}>

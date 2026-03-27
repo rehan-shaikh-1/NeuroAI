@@ -13,13 +13,16 @@ export default function ModelSelectPage() {
     return (
         <main className="min-h-screen w-full bg-[#fcfcfc] overflow-y-auto overflow-x-hidden dot-bg-light text-black flex flex-col items-center justify-center relative font-sans selection:bg-orange-200 p-6 md:p-12">
             {/* Header */}
-            <header className="absolute top-0 w-full flex justify-between items-center p-6 lg:p-8 z-10">
+            <header className="absolute top-0 w-full flex justify-between items-center p-5 lg:p-8 z-50 bg-white/40 backdrop-blur-md border-b border-white/50 shadow-sm transition-all">
                 <button
                     onClick={() => router.push('/')}
                     className="text-orange-500 font-extrabold tracking-tighter italic text-xl drop-shadow-sm hover:scale-105 transition-transform origin-left"
                 >
                     NEURO AI
                 </button>
+                <div className="hidden md:flex gap-4">
+                    <div className="text-xs font-bold text-gray-500 tracking-widest uppercase bg-white/60 px-4 py-2 rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.03)] border border-gray-100">Setup Phase</div>
+                </div>
             </header>
 
             <motion.div

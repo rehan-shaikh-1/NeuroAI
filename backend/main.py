@@ -14,14 +14,14 @@ from backend.analyzer import analyze_student_scores
 from backend.prompt_builder import build_prompt
 from backend.llm import generate_response
 
-def run_study_buddy_pipeline(input_data: Dict[str, Any]) -> str:
+async def run_study_buddy_pipeline(input_data: Dict[str, Any]) -> str:
     """Run the entire Study Buddy AI pipeline given a raw dictionary input."""
     student = StudentInput(**input_data)
     analysis = analyze_student_scores(student)
     system_prompt = build_prompt(student, analysis)
     user_prompt = student.raw_input if student.raw_input else "Hello"
     
-    llm_output = generate_response(system_prompt, user_prompt, student.history)
+    llm_output = await generate_response(system_prompt, user_prompt, student.history)
     
     # Enrichment layer: only fires when user explicitly asks for resources, links, or wiki definitions
     resource_triggers = [
@@ -42,6 +42,8 @@ def run_study_buddy_pipeline(input_data: Dict[str, Any]) -> str:
         
     return llm_output
 
+import asyncio
+
 def main():
     parser = argparse.ArgumentParser(description="Study Buddy AI inference pipeline")
     parser.add_argument("--input", type=str, required=True, help="JSON string of student data")
@@ -50,7 +52,7 @@ def main():
     
     try:
         data = json.loads(args.input)
-        response = run_study_buddy_pipeline(data)
+        response = asyncio.run(run_study_buddy_pipeline(data))
         print(response)
     except json.JSONDecodeError:
         print("Error: Invalid JSON input format")

@@ -97,22 +97,37 @@ export default function TalkingAvatar({ textToSpeak, isActive, sizeMode = 'chat'
   const currentDurationRef = useRef(2000); // default 2s
   const startTimeRef = useRef(0);
 
+  // Initial static frame load
+  useEffect(() => {
+      if (imagesLoaded && !animatingRef.current) {
+          drawFrame(0);
+      }
+  }, [imagesLoaded]);
+
   // Dedicated Render Loop synced to audio playback
   useEffect(() => {
     let animationFrameId: number;
+    let lastDrawTime = 0;
+    const TARGET_FPS = 30;
+    const frameInterval = 1000 / TARGET_FPS;
 
     const animate = (time: number) => {
         if (!animatingRef.current) {
-            // Halt gracefully on first frame
+            // Idle state locking to prevent runaway drawing
             if (frameIndexRef.current !== 0) {
                 frameIndexRef.current = 0;
-                drawFrame(0);
-            } else {
                 drawFrame(0);
             }
             animationFrameId = requestAnimationFrame(animate);
             return;
         }
+
+        // --- FPS Throttling for Performance ---
+        if (time - lastDrawTime < frameInterval) {
+            animationFrameId = requestAnimationFrame(animate);
+            return;
+        }
+        lastDrawTime = time;
 
         // Time-based synchronization
         const elapsedTime = time - startTimeRef.current;
@@ -141,65 +156,43 @@ export default function TalkingAvatar({ textToSpeak, isActive, sizeMode = 'chat'
 
   // TTS Synchronization
   const [, setSpeakTick] = useState(0); // For forcing re-render of badge
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     if (!textToSpeak) return;
 
-    window.speechSynthesis.cancel();
+    if (audioRef.current) audioRef.current.pause();
     
     // Slight delay to simulate processing before answering
     const timer = setTimeout(() => {
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        const url = `http://localhost:8000/api/v1/tts?text=${encodeURIComponent(textToSpeak)}&model=female`;
+        const audio = new Audio(url);
+        audioRef.current = audio;
 
-        const pickBestVoice = () => {
-            const voices = window.speechSynthesis.getVoices();
-            const priority = [
-                "Google UK English Female",
-                "Google US English",
-                "Google UK English Male",
-                "Microsoft Zira",
-                "Microsoft David",
-                "Samantha",
-                "Karen",
-                "Daniel",
-                "Moira",
-            ];
-            for (const name of priority) {
-                const v = voices.find(v => v.name === name);
-                if (v) return v;
-            }
-            return voices.find(v => v.lang.startsWith('en-')) ?? null;
-        };
-
-        const voice = pickBestVoice();
-        if (voice) utterance.voice = voice;
-        utterance.rate = 0.95;
-        utterance.pitch = 1.05;
-        utterance.volume = 1.0;
-
-        utterance.onstart = () => {
+        audio.onplay = () => {
             animatingRef.current = true;
             startTimeRef.current = performance.now();
-            currentDurationRef.current = Math.max((textToSpeak.length / CHARS_PER_SECOND) * 1000, 1000);
+            currentDurationRef.current = isFinite(audio.duration) ? Math.max(audio.duration * 1000, 1000) : Math.max((textToSpeak.length / CHARS_PER_SECOND) * 1000, 1000);
             setSpeakTick(t => t + 1);
         };
 
-        utterance.onend = () => {
+        audio.onended = () => {
             animatingRef.current = false;
             setSpeakTick(t => t + 1);
         };
 
-        utterance.onerror = (e) => {
-            console.error("Speech Synthesis Error:", e);
+        audio.onerror = (e) => {
+            console.error("Pyttsx3 TTS Audio Error:", e);
             animatingRef.current = false;
             setSpeakTick(t => t + 1);
         };
 
-        window.speechSynthesis.speak(utterance);
+        audio.play().catch(e => console.error("Playback failed:", e));
     }, 100);
 
     return () => {
         clearTimeout(timer);
-        window.speechSynthesis.cancel();
+        if (audioRef.current) audioRef.current.pause();
         animatingRef.current = false;
     };
   }, [textToSpeak]);
@@ -207,7 +200,7 @@ export default function TalkingAvatar({ textToSpeak, isActive, sizeMode = 'chat'
   // Force cancel on pure unmount to prevent ghostly voices
   useEffect(() => {
     return () => {
-        window.speechSynthesis.cancel();
+        if (audioRef.current) audioRef.current.pause();
     }
   }, []);
 
@@ -216,7 +209,7 @@ export default function TalkingAvatar({ textToSpeak, isActive, sizeMode = 'chat'
         <div className={`
             ${sizeMode === 'video' 
                 ? 'w-72 h-72 sm:w-80 sm:h-80 md:w-[450px] md:h-[450px] lg:w-[500px] lg:h-[500px] border-4 md:border-8 shadow-[0_0_100px_rgba(249,115,22,0.3)]' 
-                : isActive ? 'w-32 h-32 md:w-56 md:h-56 border-[3px] md:border-4 shadow-[0_0_50px_rgba(249,115,22,0.2)]' : 'w-48 h-48 md:w-64 md:h-64 border-4 shadow-[0_0_50px_rgba(249,115,22,0.2)]'}
+                : isActive ? 'w-48 h-48 md:w-72 md:h-72 border-[3px] md:border-4 shadow-[0_0_50px_rgba(249,115,22,0.2)]' : 'w-48 h-48 md:w-64 md:h-64 border-4 shadow-[0_0_50px_rgba(249,115,22,0.2)]'}
             rounded-full border-orange-500 bg-white relative flex items-center justify-center overflow-hidden transition-all duration-700 ease-out
             ${!isActive && sizeMode === 'chat' ? 'hover:scale-105' : ''}
         `}>

@@ -86,60 +86,49 @@ export default function VrmAvatar({ textToSpeak, isActive, sizeMode = 'chat' }: 
   const [isTalking, setIsTalking] = useState(false);
   const [, setSpeakTick] = useState(0);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   // Map speech synthesis identically to the Talk Avatar flips
   useEffect(() => {
     if (!textToSpeak) return;
 
-    window.speechSynthesis.cancel();
+    if (audioRef.current) audioRef.current.pause();
     
     const timer = setTimeout(() => {
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        
-        const pickBestVoice = () => {
-            const voices = window.speechSynthesis.getVoices();
-            // Priority order: Google voices first (best quality), then OS voices
-            const priority = [
-                "Google UK English Female",
-                "Google US English",
-                "Google UK English Male",
-                "Microsoft Zira",
-                "Microsoft David",
-                "Samantha",
-                "Karen",
-                "Daniel",
-                "Moira",
-            ];
-            for (const name of priority) {
-                const v = voices.find(v => v.name === name);
-                if (v) return v;
-            }
-            // Fallback: any English voice
-            return voices.find(v => v.lang.startsWith('en-')) ?? null;
+        const url = `http://localhost:8000/api/v1/tts?text=${encodeURIComponent(textToSpeak)}&model=vrm`;
+        const audio = new Audio(url);
+        audioRef.current = audio;
+
+        audio.onplay = () => {
+            setIsTalking(true);
+            setSpeakTick(t => t + 1);
         };
 
-        const voice = pickBestVoice();
-        if (voice) utterance.voice = voice;
-        utterance.rate = 0.95;
-        utterance.pitch = 1.05;
-        utterance.volume = 1.0;
+        audio.onended = () => {
+            setIsTalking(false);
+            setSpeakTick(t => t + 1);
+        };
 
-        setIsTalking(true);
-        setSpeakTick(t => t + 1);
-        
-        utterance.onend = () => { setIsTalking(false); setSpeakTick(t => t + 1); };
-        utterance.onerror = () => { setIsTalking(false); setSpeakTick(t => t + 1); };
+        audio.onerror = () => {
+            setIsTalking(false);
+            setSpeakTick(t => t + 1);
+        };
 
-        // Bind reference explicitly to prevent Chrome garbage collection of the TTS events
-        (window as any)._currentUtterance = utterance;
+        audio.play().catch(e => console.error("Playback failed:", e));
 
-        window.speechSynthesis.speak(utterance);
     }, 100);
 
-    return () => { clearTimeout(timer); window.speechSynthesis.cancel(); setIsTalking(false); };
+    return () => { 
+        clearTimeout(timer); 
+        if (audioRef.current) audioRef.current.pause(); 
+        setIsTalking(false); 
+    };
   }, [textToSpeak]);
 
   useEffect(() => {
-    return () => window.speechSynthesis.cancel();
+    return () => {
+        if (audioRef.current) audioRef.current.pause();
+    };
   }, []);
 
   const vrmUrl = '/Bizdude.vrm';
@@ -162,7 +151,7 @@ export default function VrmAvatar({ textToSpeak, isActive, sizeMode = 'chat' }: 
         <div className={`
             ${sizeMode === 'video' 
                 ? 'w-72 h-72 sm:w-80 sm:h-80 md:w-[450px] md:h-[450px] lg:w-[500px] lg:h-[500px] border-4 md:border-8 shadow-[0_0_100px_rgba(249,115,22,0.3)]' 
-                : isActive ? 'w-32 h-32 md:w-56 md:h-56 border-[3px] md:border-4 shadow-[0_0_50px_rgba(249,115,22,0.2)]' : 'w-48 h-48 md:w-64 md:h-64 border-4 shadow-[0_0_50px_rgba(249,115,22,0.2)]'}
+                : isActive ? 'w-48 h-48 md:w-72 md:h-72 border-[3px] md:border-4 shadow-[0_0_50px_rgba(249,115,22,0.2)]' : 'w-48 h-48 md:w-64 md:h-64 border-4 shadow-[0_0_50px_rgba(249,115,22,0.2)]'}
             rounded-full border-orange-500 bg-[#1a1a2e] relative flex items-center justify-center overflow-hidden transition-all duration-700 ease-out
             ${!isActive && sizeMode === 'chat' ? 'hover:scale-105' : ''}
         `}>

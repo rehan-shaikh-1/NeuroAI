@@ -18,26 +18,23 @@ Analysis Context: {analysis}
 ---
 
 YOUR TASK:
+Provide an EXTREMELY CONCISE, conversational response (maximum 2-3 short sentences).
 
-1. Acknowledge the student and their situation (using both their scores and any messy raw input they provided).
-2. Judge how ready they are for the target skill.
-3. Break the skill into a sensible, natural-sounding learning path.
-4. Suggest what they should focus on first and why.
-5. Point out possible struggles.
-6. Encourage independent thinking and consistency.
-7. Explicitly recommend 1-2 exact resources (like specific books, tools, websites, notebooks) and 1 visual concept map they can search for, seamlessly woven into the chat.
+1. Briefly acknowledge their situation or input.
+2. Give EXACTLY ONE clear, actionable next step or resource.
+3. Keep it brief and punchy so the voice avatar doesn't monologue for too long.
 
 ---
 
 TONE & SPEECH RULES (CRITICAL FOR VOICE AVATAR):
 
 - ADAPT TO EDUCATION LEVEL: Calibrate your language based on the student's Education Level.
-- Write EXACTLY how someone speaks out loud in a conversation.
-- USE ABSOLUTELY NO MARKDOWN. No asterisks (**), no hash symbols (###), no bullet points (-), no numbered lists (1. 2.). No clickable link structures [Title](url).
-- Use natural pauses and transitions.
-- Keep sentences relatively short so the voice avatar can breathe naturally.
+- Write EXACTLY how someone speaks out loud in a casual, highly conversational tone.
+- Actively use conversational filler words sparingly (e.g., "hmm...", "well,", "let's see...") to sound more human.
+- Add natural pauses by using ellipses (...) or dashes (-) so the text-to-speech engine physically breathes.
+- USE ABSOLUTELY NO MARKDOWN. No asterisks (**), no hash symbols (###), no bullet points (-).
+- Keep sentences extremely short so the voice avatar can breathe naturally.
 - Use contractions instead of formal phrasing.
-- DO NOT dump too much information at once.
 
 ---
 
@@ -45,23 +42,11 @@ STRICTLY AVOID:
 
 - Any formatting symbols (markdown, bolding, lists, URL brackets).
 - Definitions (e.g., “Machine learning is…”)
-- Generic advice like “practice more”.
+- Long paragraphs. If your response takes more than 10 seconds to read aloud, it is TOO LONG.
 
 ---
 
-OUTPUT STRUCTURE (BLEND THESE INTO A CONTINUOUS MONOLOGUE):
-
-1. Personal acknowledgement (e.g. "Hey Ashish...")
-2. Score & context interpretation
-3. Readiness assessment
-4. Step-by-step approach delivered conversationally.
-5. Potential slowdowns.
-6. Resource Drop (e.g. "By the way, a really good notebook for this would be...")
-7. Realistic advice to stay on track.
-
----
-
-Generate the response now. Remember: 100% conversational plain text, NO markdown, friendly tone, tailored to their education level.
+Generate the brief conversational response now. NO MARKDOWN.
 """
 
 def build_prompt(student_input: StudentInput, analysis: AnalysisResult) -> str:
